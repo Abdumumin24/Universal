@@ -1,51 +1,61 @@
+require('dotenv').config();  // .env faylidan o'qish uchun
+
 const express = require('express');
 const mongoose = require('mongoose');
-const cors = require('cors');
-const path = require('path');
-const Laptop = require('./models/laptop'); // Laptop modelini import qilish
-
 const app = express();
-const PORT = 3000;
 
-// Middleware
-app.use(cors());
+// MongoDB ulanish
+mongoose.connect(process.env.DATABASE_URL, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+  .then(() => console.log("MongoDB ulanishi muvaffaqiyatli"))
+  .catch((error) => console.error("MongoDB ulanishi xatosi:", error));
+
+// Middlewares
 app.use(express.json());
 
-// Static fayllarni public papkadan olish
-app.use(express.static(path.join(__dirname, 'public')));
+// Laptop modeli
+const Laptop = mongoose.model('Laptop', new mongoose.Schema({
+  name: String,
+  specs: String,
+  price: Number
+}));
 
-// MongoDBga ulanish
-mongoose.connect('mongodb+srv://abdumumim24:yqYFd9S1GwLUAeGN@cluster0.yfeqh.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0', { useNewUrlParser: true, useUnifiedTopology: true })
-
-    .then(() => console.log('MongoDBga ulanish muvaffaqiyatli amalga oshirildi'))
-    .catch((error) => console.log('MongoDBga ulanishda xato:', error));
-
-// Noutbuk qo'shish
+// POST request uchun: yangi laptop qo'shish
 app.post('/laptops', async (req, res) => {
-    const { name, specs, price } = req.body;
-
-    try {
-        const newLaptop = new Laptop({ name, specs, price });
-        await newLaptop.save();
-        res.status(201).json(newLaptop);
-    } catch (error) {
-        res.status(500).json({ message: 'Ma’lumot saqlashda xato yuz berdi' });
-    }
+  const laptop = new Laptop({
+    name: req.body.name,
+    specs: req.body.specs,
+    price: req.body.price
+  });
+  try {
+    const savedLaptop = await laptop.save();
+    res.status(201).send(savedLaptop);
+  } catch (error) {
+    res.status(400).send({ error: error.message });
+  }
 });
 
-// Noutbuklar ro‘yxatini olish
+// GET request uchun: hamma laptoplarni olish
 app.get('/laptops', async (req, res) => {
-    try {
-        const laptops = await Laptop.find();
-        res.status(200).json(laptops);
-    } catch (error) {
-        res.status(500).json({ message: 'Ma’lumotlarni olishda xato yuz berdi' });
-    }
+  try {
+    const laptops = await Laptop.find();
+    res.status(200).send(laptops);
+  } catch (error) {
+    res.status(500).send({ error: error.message });
+  }
 });
 
 // Serverni ishga tushirish
-app.listen(PORT, () => {
-    console.log(`Server ${PORT}-portda ishlamoqda`);
+const port = process.env.PORT || 3000;
+app.listen(port, () => {
+  console.log(`Server ${port}-portda ishlamoqda`);
 });
+
+
+
+
+// mongodb+srv://abdumumim24:yqYFd9S1GwLUAeGN@cluster0.yfeqh.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
 
 
